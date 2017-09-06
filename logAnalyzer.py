@@ -18,28 +18,38 @@ LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" combine
 '''
 if __name__ == '__main__':
 	
-	pathRead  = '/data/logs2016-apache/apache_logs_2016/'
-	#pathWrite = '/data/AutomaticAccess2016.txt'
-	pathWrite = '/data/WrongUrl2016'
+	pathRead  = '/data/logs2017/'
+	pathWrite = '/data/AutomaticAccess2017.txt'
+	#pathWrite = '/data/WrongUrl2016'
+	pathWriteBot = '/data/Googlebot2Q-2017.txt'
 	regex = '([(\d\.)]+) - - \[(.*?)\] "(.*?)" (\d+) (.*?) "(.*?)" "(.*?)"'
 
-	fw = open( pathWrite, 'w')
+	fw = open( pathWrite, 'w' )
+	fwBot = open( pathWriteBot, 'w' )
 	counterGlobal 		= 0
 	counterOpensearch 	= 0
 	counterMemento 		= 0
+	counterMementoAPI	= 0
 	counterNoMatch 		= 0
 	counterWrongUrl		= 0
+	countertGoogleBot	= 0
 	pastDate 			= ''
 	userAgents 			= [ ]
+	countertXmlQuery	= 0
+	boolTest			= 0
+	nagiosCounter		= 0
+	wrongsUrlList		= [ ]
+
 	for filename in os.listdir( pathRead ):
-		#print filename
 		try:
 			with gzip.open( pathRead + filename , 'rb' ) as f:
-			    for line in f:
-			    	counterGlobal += 1
-			    	#print counterGlobal
-			    	Result = re.match( regex , line )
-			    	if Result:
+				for line in f:
+					
+					#print counterGlobal
+					Result = re.match( regex , line )
+					if Result:
+						counterGlobal += 1
+						boolTest = 0
 						#print Result.groups( )[ 2 ]
 						refer 			= Result.groups( )[ 4 ]
 						ip 				= Result.groups( )[ 0 ]
@@ -59,26 +69,60 @@ if __name__ == '__main__':
 						else:
 							continue
 
+						if "/wayback/id" in resourceRequest:
+							if not ip.startswith( "193.136." ):
+								#print resourceRequest , data , line
+								#fw.write( "{0} {1}\n".format( resourceRequest , data ) )
+								wrongsUrlList.append( resourceRequest )
+								counterWrongUrl += 1
+								boolTest = 1
+
 						if "opensearch?query=" in resourceRequest:
 							if not ip.startswith( "193.136." ):
 								counterOpensearch += 1
+								boolTest = 1
 
 						if 'TimeTravelAggregator-lanl;Browser - timetravel' in userAgent  or 'memgator' in userAgent.lower( ):
 							counterMemento += 1
+							boolTest = 1
 						
+						if "/wayback/timemap/*/" in resourceRequest:
+							counterMementoAPI += 1
+							boolTest = 1
+
+						if "googlebot" in userAgent.lower( ):
+							countertGoogleBot += 1
+							boolTest = 1
 						
-						if "/wayback/id" in resourceRequest:
-							print resourceRequest , data , line
-							fw.write( "{0} {1}\n".format( resourceRequest , data ) )
-							counterWrongUrl += 1
-					else:
-			    	#	print "Error, no match [{0}]".format( line )
-			    		counterNoMatch += 1
+						if '/wayback/wayback/xmlqueryhttp:' in resourceRequest:
+							countertXmlQuery += 1
+							boolTest = 1
+
+						if 'nagios-plugins' in userAgent:
+							nagiosCounter += 1
+							boolTest = 1
+
+						#if boolTest == 0:
+							#print "refer[{0}] ip[{1}] code[{2}] data[{3}] resource[{4}] user-agent[{5}]\n\n".format( refer, ip, code, data, resource, userAgent )
+						
+
+				print "{0} {1}".format( filename[8:18], countertGoogleBot )
+				fwBot.write( "{0} {1}\n".format( filename[8:18], countertGoogleBot ) )
+				countertGoogleBot = 0
+					
+					#else:
+						#print "Don't Match!!! = {0}".format( line )						
+						
+
 
 		except ( OSError , IOError ) as e:
 			print( "Wrong file or file path" )
 
-	print "Number of Requests Memento = [{0}] OpenSearch = [{1}] counterWrongUrl = [{2}] total[{3}] sirens.fccn.pt[{4}]".format( counterMemento , counterOpensearch , counterWrongUrl , counterGlobal , counterNoMatch )
-	#fw.write( "Number of Requests Memento = [{0}] OpenSearch = [{1}] total[{2}]".format( counterMemento , counterOpensearch , counterGlobal ) )
+	wrongsUrlSet = set( wrongsUrlList )
+	print wrongsUrlSet
+
+	print "Number of Requests Memento = [{0}] MementoAPI[{1}] OpenSearch = [{2}] counterWrongUrl = [{3}] countertXmlQuery[{4}] nagios[{5}] total[{6}] ".format( counterMemento , counterMementoAPI , counterOpensearch , counterWrongUrl , countertXmlQuery , nagiosCounter , counterGlobal )
+	fw.write( "Number of Requests Memento = [{0}] MementoAPI[{1}] OpenSearch = [{2}] countertXmlQuery[{3}] nagios[{4}] total[{5}]".format( counterMemento , counterMementoAPI , counterOpensearch , countertXmlQuery , nagiosCounter , counterGlobal ) )
 	fw.close( )
+	fwBot.close( )
 
