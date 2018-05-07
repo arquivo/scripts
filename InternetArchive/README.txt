@@ -1,6 +1,6 @@
 == Uploading Portuguese Web Archive crawls to the Internet Archive ==
 
-This scripts were developed to facilitated the upload of Heritrix crawls to the Internet Archive using the IAS3 API. Follow these steps:
+These scripts were developed to facilitate the upload of Heritrix crawls to the Internet Archive using the IAS3 API. Follow these steps:
 
 1. Define the crawl meta-data at the config file (check example at ./scripts/InternetArchive/crawlConfigFiles/configItems$CRAWL_NAME.cfg). 
 
@@ -24,7 +24,7 @@ e.g. #cp /shareP19/IAExchange/.bashrc ~
 2. Generate 10GB items for the crawl using generateItems.sh (100 ARCs of 100 MB in each item)
 e.g. #./scripts/InternetArchive/generateItems.sh ./scripts/InternetArchive/crawlConfigFiles/configItems$CRAWL_NAME.cfg 2>&1 1>generateItems$CRAWL_NAME.out &
 
-2.1. Check if the nr. of items on $OUTPUTFILE matches the nr. of ARC files on $DIRECTORY_OF_THE_CRAWL nr. of ARC files on documentation about crawl meta-data  (column Número de arcs on http://wiki.priv.fccn.pt/Recolhas). 
+2.1. Check if the nr. of items on $OUTPUTFILE matches the nr. of ARC files on $DIRECTORY_OF_THE_CRAWL nr. of ARC files on documentation about crawl meta-data  (column NÃºmero de arcs on http://wiki.priv.fccn.pt/Recolhas). 
 e.g. 
 #cd $DIRECTORY_OF_THE_CRAWL; find -iname *.arc.gz |wc; cd $IA; cat itemsForAWP17| grep .arc.gz | wc
 http://wiki.priv.fccn.pt/Recolhas; forth column.
@@ -42,7 +42,7 @@ backup logs
 #tar -cvzf ./finished/uploadLogs$CRAWL_NAME'-'$(date +"%d-%m-%Y").tar.gz ./*$CRAWL_NAME*
 
 get items to re-upload
-BUG WITH "Sáb" on log message: "S<E1>b Jul 5 00:06:44 WEST 2014, Error message after retry: 100. RECOVER_ARC_FILE:portuguese-web-archive-AWP122011-1 ./arcs/1/16/IAH-20120125101649-08516-p13.arquivo.pt.arc.gz 9c06804a7b758fdb4b71ef2787194c68"
+BUG WITH "SÃ¡b" on log message: "S<E1>b Jul 5 00:06:44 WEST 2014, Error message after retry: 100. RECOVER_ARC_FILE:portuguese-web-archive-AWP122011-1 ./arcs/1/16/IAH-20120125101649-08516-p13.arquivo.pt.arc.gz 9c06804a7b758fdb4b71ef2787194c68"
 
 # cat configItems$CRAWL_NAME.upload |grep 'RECOVER_ARC_FILE:'| sed 's/.*RECOVER_ARC_FILE://g' > itemsFor$CRAWL_NAME.recover
 
