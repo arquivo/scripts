@@ -30,7 +30,9 @@ with open(args.queries_list_file, mode='r') as input_file:
                 with open(args.results_file, mode='a') as output_file:
                     for result in web_data.web_pages.value:
                         print("Writing result: {}".format(result.url))
-                        output_file.write("{},{},{}\n".format(line, result.name, result.url))
+                        output_file.write("{},{}\n".format(result.name, result.url))
 
         except Exception as err:
             print("Exception {}".format(err))
+            
+        time.sleep(1)
