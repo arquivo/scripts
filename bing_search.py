@@ -13,8 +13,8 @@ import time
 
 # encoding=utf8
 import sys
-#reload(sys)
-#sys.setdefaultencoding('utf8')
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 from azure.cognitiveservices.search.websearch import WebSearchAPI
 from msrest.authentication import CognitiveServicesCredentials
@@ -35,17 +35,18 @@ client = WebSearchAPI(CognitiveServicesCredentials(subscription_key))
 
 with open(args.queries_list_file, mode='r') as input_file:
     for line in input_file:
-        print("Querying for: {}".format(line))
+        query = line.rstrip()
+        print("Querying for: {}".format(query))
         try:
-            web_data = client.web.search(query=line, count=args.results_number)
+            web_data = client.web.search(query=query, count=args.results_number)
 
             if web_data.web_pages.value:
                 print("Webpage Results #{}".format(len(web_data.web_pages.value)))
 
                 with open(args.results_file, mode='a') as output_file:
-                    for result in web_data.web_pages.value:
+                    for i,result in enumerate(web_data.web_pages.value):
                         print("Writing result: {}".format(result.url))
-                        output_file.write("{}\t{}\n".format(result.name, result.url))
+                        output_file.write("{}\t{}\t{}\t{}\n".format(query, i+1, result.name, result.url))
 
         except Exception as err:
             print("Exception {}".format(err))
