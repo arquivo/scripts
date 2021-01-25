@@ -1,6 +1,8 @@
 import pandas as pd
 import re
 import argparse
+from urlextract import URLExtract
+
 
 ####Examples
 
@@ -17,9 +19,9 @@ import argparse
 ###############################################################################################################
 
 #Parameters
-parser = argparse.ArgumentParser(description='Process seeds FCT project')
+parser = argparse.ArgumentParser(description='Process seeds from excel')
 parser.add_argument('-f','--file', help='Localization of the file (.xlsx)', default= "Websites_Arquivo.xlsx")
-parser.add_argument('-o','--output', help='Localization and name of the output file', default= "urls_fct.txt")
+parser.add_argument('-o','--output', help='Localization and name of the output file', default= "urls.txt")
 args = vars(parser.parse_args())
 
 ##Read inputs
@@ -33,14 +35,28 @@ if not file_to_process.endswith(".xlsx"):
 ##Read input file into pandas
 df = pd.read_excel(file_to_process)
 
+#import pdb;pdb.set_trace()
+
 ##Process input file
-with open(output_file, "w") as file:
+with open(output_file, mode="a") as file:
     for i in df.index:
-        websites = df.at[i, 'Websites']
+        websites = df.at[i, 'URL']
+        extractor = URLExtract()
         ##Check if row is not null
         if not pd.isnull(websites):
-        	##Extract all urls from the column "Websites"
-            for url in re.findall('(https?://\S+)', websites):
-                url = url.replace(";", "")
-                url = url.replace(",", "")
-                file.write(url + "\n")
+            ##Extract all urls from the column "Websites"
+            for url in extractor.find_urls(websites):
+                #if "http://www.artis.letras.ulisboa.pt/pro" in url:
+                #    import pdb;pdb.set_trace()
+                if "," in url:
+                    if re.match(".*,http.*|.*,www.*", url) is not None:
+                        list_urls_common = url.split(",")
+                        for elem in list_urls_common:
+                            if elem != "":
+                                file.write(elem + "\n")
+                    else:
+                        #http://www.artis.letras.ulisboa.pt/proj_n,7,89,1293,detalhe.aspx
+                        url = re.sub(",$", "", url)
+                        file.write(url + "\n")
+                else:
+                    file.write(url + "\n")
