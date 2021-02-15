@@ -2,6 +2,8 @@ import pandas as pd
 import re
 import argparse
 from urlextract import URLExtract
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 
 
 ####Examples
@@ -35,6 +37,22 @@ if not file_to_process.endswith(".xlsx"):
 ##Read input file into pandas
 df = pd.read_excel(file_to_process)
 
+validate = URLValidator()
+
+def url_validator(url, file):
+    try:
+        validate(url)
+        file.write(url + "\n")
+    except ValidationError as exception:
+        if not url.startswith("http") and not url.startswith("www"):
+            url = "http://www." + url
+            file.write(url + "\n")
+        elif not url.startswith("http"):
+            url = "http://" + url
+            file.write(url + "\n")
+        else:
+            import pdb;pdb.set_trace()
+
 #import pdb;pdb.set_trace()
 
 ##Process input file
@@ -53,10 +71,10 @@ with open(output_file, mode="a") as file:
                         list_urls_common = url.split(",")
                         for elem in list_urls_common:
                             if elem != "":
-                                file.write(elem + "\n")
+                                url_validator(elem, file)
                     else:
                         #http://www.artis.letras.ulisboa.pt/proj_n,7,89,1293,detalhe.aspx
                         url = re.sub(",$", "", url)
-                        file.write(url + "\n")
+                        url_validator(url, file)
                 else:
-                    file.write(url + "\n")
+                    url_validator(url, file)
