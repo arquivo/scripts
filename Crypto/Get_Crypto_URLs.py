@@ -69,7 +69,7 @@ with click.progressbar(length=len(data), show_pos=True) as progress_bar:
         data_coins.append([json_coin['id'], json_coin['name'], json_coin['symbol'], ', '.join(data_homepage), ', '.join(data_categories), ', '.join(data_platforms), ', '.join(data_github), data_twitter, data_facebook, data_reddit])
         
         # wait 1 second (not overload)
-        time.sleep(1)
+        time.sleep(2)
 
 #Transform the list into a dataframe
 df = pd.DataFrame(data_coins, columns=['ID', 'Name', 'Symbol', 'URLs_HomePage', 'Categories', 'Platforms', 'Github', 'Twitter', 'Facebook', 'Reddit'])
@@ -79,102 +79,229 @@ df.to_csv('FINAL_CRYPTO_coingecko.csv', sep=';', encoding='utf-8')
 ######################################################################################################################################################
 ######################################################################################################################################################
 
-#Get URLs from coinmarketcap.com (API with limit request)
-
-#Connect coinmarketcap api
-cmc = coinmarketcapapi.CoinMarketCapAPI('YOUT_KEY_COINMAKERTCAP')
-
-#Get the map with all the symbols from coinmarketcap
-data_id_map = cmc.cryptocurrency_map()
-
-#Parse the data into a list
-df = pd.DataFrame(data_id_map.data, columns =['name','symbol'])
-list_symbols = df['symbol'].tolist()
-
-#Request can't handle with too many parametrs, so we need to do 0 to 1000, 1000 to 2000 ....
-#Attention we need to go from 0 to len(df['symbol'].tolist()) 1000 each time. We may need to update the list_value if len(df['symbol'].tolist()) is to large
-list_value =[1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, len(df['symbol'].tolist())]
-
-#List to add each entrie of each coin
 data_coinmarketcap = []
 
-for i in range(1, len(list_value)):
+for start in range(1, 20000, 500):
 
-    list_symbols_aux = list_symbols[list_value[i-1]:list_value[i]]
-    for elem in list_symbols_aux:
-        if not elem.isalnum(): # remove element not alphanumeric. The API can not deal with not alphanumeric symbols
-            list_symbols_aux.remove(elem)
-        elif set(elem).difference(printable): #some symbols pass the isalnum
-            list_symbols_aux.remove(elem)
+    time.sleep(10)
 
-    #sting with the list of symbols
-    string_one_list = ','.join(list_symbols_aux)
+    url = 'https://web-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 
-    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info"
-
-    #parameters for the request
-    parameters = {
-        'symbol' : string_one_list
+    params = {
+        'start': start,
+        'limit': 500,
     }
 
-    #headers for the request
     headers = {
         'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': 'YOUT_KEY_COINMAKERTCAP'
+        'X-CMC_PRO_API_KEY': 'YOUR_KEY'
     }
 
-    #Get metadata of each coin
-    response = requests.get(url, params=parameters, headers=headers)
-    json = response.json()
+    r = requests.get(url, params=params, headers=headers)
+    data = r.json()
+    #print(data)
 
-    #Process json
-    for elem in json['data']:
-        
-        id_coin = json['data'][elem]['id']
-        name = json['data'][elem]['name']
-        symbol = json['data'][elem]['symbol']
-        
-        #1. Get the the Homepages
-        homepages = ""
-        if json['data'][elem]['urls']['website'] != None: 
-            homepages = ', '.join(json['data'][elem]['urls']['website'])
+    list_symbols = []
+    for item in data['data']:
+        if item['symbol'].isalnum() and not set(item['symbol']).difference(printable): # remove element not alphanumeric. The API can not deal with not alphanumeric symbols #some symbols pass the isalnum
+            list_symbols.append(item['symbol'])
 
-        #2. Get the Categories
-        tag_names = ""
-        if json['data'][elem]['tag-names'] != None:
-            tag_names = ', '.join(json['data'][elem]['tag-names'])
+    string_one_list = ','.join(list_symbols)
 
-        #3. Get the Platforms
-        data_platform = []
-        if json['data'][elem]['contract_address'] != None:
-            for elem_platform in json['data'][elem]['contract_address']:
-                data_platform.append(elem_platform['platform']['name'])
-        platform =  ', '.join(data_platform)
+    if string_one_list != "":
 
-        #4. Get the Github
-        source_code = ""
-        if json['data'][elem]['urls']['source_code'] != None:
-            source_code = ', '.join(json['data'][elem]['urls']['source_code'])
+        time.sleep(10)
 
-        #5. Get the Twitter
-        twitter = ""
-        if json['data'][elem]['urls']['twitter'] != None:
-            twitter = ', '.join(json['data'][elem]['urls']['twitter'])
+        url = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info"
 
-        #6. Get the Facebook
-        facebook = ""
-        if json['data'][elem]['urls']['facebook'] != None:
-            facebook = ', '.join(json['data'][elem]['urls']['facebook'])
+        #parameters for the request
+        parameters = {
+            'symbol' : string_one_list,
+            'aux' : "urls,logo,description,tags,platform,date_added"
+        }
 
-        #7. Get the Reddit
-        reddit = ""
-        if json['data'][elem]['urls']['reddit'] != None:
-            reddit = ', '.join(json['data'][elem]['urls']['reddit'])
-        
-        # Append the information of the coin processed
-        data_coinmarketcap.append([id_coin, name, symbol, homepages, tag_names, platform, source_code, twitter, facebook, reddit])
+        #headers for the request
+        headers = {
+            'Accepts': 'application/json',
+            'X-CMC_PRO_API_KEY': 'YOUR_KEY'
+        }
+
+        #Get metadata of each coin
+        response = requests.get(url, params=parameters, headers=headers)
+        json = response.json()
+
+        #Process json
+        with click.progressbar(length=len(json['data']), show_pos=True) as progress_bar:
+
+            for elem in json['data']:
+                #import pdb;pdb.set_trace()
+                progress_bar.update(1)
+                
+                id_coin = json['data'][elem][0]['id']
+                name = json['data'][elem][0]['name']
+                symbol = json['data'][elem][0]['symbol']
+                description = json['data'][elem][0]['description']
+                logo = json['data'][elem][0]['logo']
+                date_added = json['data'][elem][0]['date_added']
+                date_launched = json['data'][elem][0]['date_launched']
+                
+                #1. Get the the Homepages
+                homepages = ""
+                if json['data'][elem][0]['urls']['website'] != None: 
+                    homepages = ', '.join(json['data'][elem][0]['urls']['website'])
+
+                #2. Get the Categories
+                tag_names = ""
+                if json['data'][elem][0]['tag-names'] != None:
+                    tag_names = ', '.join(json['data'][elem][0]['tag-names'])
+
+                #3. Get the Platforms
+                data_platform = []
+                data_contract_address = []
+                if json['data'][elem][0]['contract_address'] != None:
+                    for elem_platform in json['data'][elem][0]['contract_address']:
+                        data_platform.append(elem_platform['platform']['name'])
+                    for elem_platform in json['data'][elem][0]['contract_address']:
+                        data_platform.append(elem_platform['contract_address'])
+                platform =  ', '.join(data_platform)
+                contract_address =  ', '.join(data_platform)
+
+                #4. Get the Github
+                source_code = ""
+                if json['data'][elem][0]['urls']['source_code'] != None:
+                    source_code = ', '.join(json['data'][elem][0]['urls']['source_code'])
+
+                #5. Get the Twitter
+                twitter = ""
+                if json['data'][elem][0]['urls']['twitter'] != None:
+                    twitter = ', '.join(json['data'][elem][0]['urls']['twitter'])
+
+                #6. Get the Facebook
+                facebook = ""
+                if json['data'][elem][0]['urls']['facebook'] != None:
+                    facebook = ', '.join(json['data'][elem][0]['urls']['facebook'])
+
+                #7. Get the Reddit
+                reddit = ""
+                if json['data'][elem][0]['urls']['reddit'] != None:
+                    reddit = ', '.join(json['data'][elem][0]['urls']['reddit'])
+                
+                # Append the information of the coin processed
+                data_coinmarketcap.append([id_coin, name, symbol, description, logo, date_added, date_launched, homepages, tag_names, contract_address, platform, source_code, twitter, facebook, reddit])
 
 #Transform the list into a dataframe
-df = pd.DataFrame(data_coinmarketcap, columns=['ID', 'Name', 'Symbol', 'URLs_HomePage', 'Categories', 'Platforms', 'Github', 'Twitter', 'Facebook', 'Reddit'])
+df = pd.DataFrame(data_coinmarketcap, columns=['ID', 'Name', 'Symbol', 'Description', 'Logo', 'Date_Added', 'Date_Lauched', 'URLs_HomePage', 'Categories', 'Contract_Address', 'Platforms', 'Github', 'Twitter', 'Facebook', 'Reddit'])
 #Convert dataframe to csv
 df.to_csv('FINAL_CRYPTO_coinmarketcap.csv', sep=';', encoding='utf-8')
+
+######################################################################################################################################################
+######################################################################################################################################################
+
+###****OPENSEA.IO****###
+
+#Since we have not a paid API we have limits on the URLs we can extract from the API.
+#So, we make requests to 3 different endpoints to try to get as many URLs from different compoments as possible.
+
+offset = 0
+data_opensea = []
+list_urls_processed = []
+
+while True:
+
+    #50000 is the limit (free api key)
+    if offset <= 50000:
+
+        url = "https://api.opensea.io/api/v1/collections?offset=" + str(offset) + "&limit=100"
+
+        headers = {"Accept": "application/json"}
+
+        response = requests.request("GET", url, headers=headers)
+
+        json = response.json()
+
+        for elem in json["collections"]:
+            if elem["external_url"] != None:
+                if (elem["external_url"], elem["name"]) not in list_urls_processed:
+                    if elem["instagram_username"] != None:
+                        if "https://www.instagram.com/" not in elem["instagram_username"]:
+                            instagram = "https://www.instagram.com/" + elem["instagram_username"].replace("@", "")
+                        else:
+                            instagram = elem["instagram_username"]
+                    else:
+                        instagram = ""
+                    data_opensea.append([elem["name"], elem["created_date"], elem["external_url"], elem["banner_image_url"], elem["description"], elem["discord_url"], elem["image_url"], elem["telegram_url"], instagram])
+        
+                    list_urls_processed.append((elem["external_url"], elem["name"]))
+        offset += 100
+        time.sleep(1)
+    else:
+        break
+
+# Starting again
+offset = 0
+
+while True:
+
+    #10000 is the limit (free api key)
+    if offset <= 10000:
+        url = "https://api.opensea.io/api/v1/bundles?offset=" + str(offset) + "&limit=50"
+
+        headers = {"Accept": "application/json"}
+
+        response = requests.request("GET", url, headers=headers)
+        json = response.json()
+        
+        for elem in json["bundles"]:
+            for asset in elem["assets"]:               
+                if asset["collection"]["external_url"] != None:
+                    if (asset["collection"]["external_url"], asset["collection"]["name"]) not in list_urls_processed:
+                        if asset["collection"]["instagram_username"] != None:
+                            if "https://www.instagram.com/" not in asset["collection"]["instagram_username"]:
+                                instagram = "https://www.instagram.com/" + asset["collection"]["instagram_username"].replace("@", "")
+                            else:
+                                instagram = asset["collection"]["instagram_username"]
+                        else:
+                            instagram = ""
+                        data_opensea.append([asset["collection"]["name"], asset["collection"]["created_date"], asset["collection"]["external_url"], asset["collection"]["banner_image_url"], asset["collection"]["description"], asset["collection"]["discord_url"], asset["collection"]["image_url"], asset["collection"]["telegram_url"], instagram])
+                        
+                        list_urls_processed.append((asset["collection"]["external_url"], asset["collection"]["name"]))
+        offset += 50
+        time.sleep(1)
+    else:
+        break
+
+# Starting again
+offset = 0
+
+while True:
+
+    #10000 is the limit (free api key)
+    if offset <= 10000:
+        url = "https://testnets-api.opensea.io/api/v1/assets?offset=" + str(offset) + "&limit=50"
+
+        headers = {"Accept": "application/json"}
+
+        response = requests.request("GET", url, headers=headers)
+        json = response.json()
+        
+        for asset in elem["assets"]:               
+            if asset["collection"]["external_url"] != None:
+                if (asset["collection"]["external_url"], asset["collection"]["name"]) not in list_urls_processed:
+
+                    if asset["collection"]["instagram_username"] != None:
+                        if "https://www.instagram.com/" not in asset["collection"]["instagram_username"]:
+                            instagram = "https://www.instagram.com/" + asset["collection"]["instagram_username"].replace("@", "")
+                        else:
+                            instagram = asset["collection"]["instagram_username"]
+                    else:
+                        instagram = ""
+                    data_opensea.append([asset["collection"]["name"], asset["collection"]["created_date"], asset["collection"]["external_url"], asset["collection"]["banner_image_url"], asset["collection"]["description"], asset["collection"]["discord_url"], asset["collection"]["image_url"], asset["collection"]["telegram_url"], instagram])
+                    
+                    list_urls_processed.append((asset["collection"]["external_url"], asset["collection"]["name"]))
+        offset += 50
+        time.sleep(1)
+    else:
+        break
+
+df = pd.DataFrame(data_opensea, columns=['name','created_date', 'external_url', 'banner_image_url', 'description', 'discord_url', "image_url", "telegram_url", "instagram_username"])
+df.to_csv('FINAL_opeansea.csv', sep=';', encoding='utf-8')
