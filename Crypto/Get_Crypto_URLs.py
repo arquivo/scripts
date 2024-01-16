@@ -7,7 +7,16 @@ import time
 import click
 from pycoingecko import CoinGeckoAPI
 
-### Get data from coingecko.com
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+###Coingecko###
+###Current not working###
+#requests are hitting 429. We'll probably have to redo the code
+#DOCS
+#https://www.coingecko.com/api/documentation
+
 cg = CoinGeckoAPI()
 data = cg.get_coins_list()
 
@@ -76,8 +85,15 @@ df = pd.DataFrame(data_coins, columns=['ID', 'Name', 'Symbol', 'URLs_HomePage', 
 #Convert dataframe to csv
 df.to_csv('FINAL_CRYPTO_coingecko.csv', sep=';', encoding='utf-8')
 
-######################################################################################################################################################
-######################################################################################################################################################
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+
+###Coinmarketcap###
+#DOCS
+#https://coinmarketcap.com/api/documentation/v1/
 
 data_coinmarketcap = []
 
@@ -94,7 +110,7 @@ for start in range(1, 20000, 500):
 
     headers = {
         'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': 'YOUR_KEY'
+        'X-CMC_PRO_API_KEY': 'YOUR KEY'
     }
 
     r = requests.get(url, params=params, headers=headers)
@@ -123,16 +139,16 @@ for start in range(1, 20000, 500):
         #headers for the request
         headers = {
             'Accepts': 'application/json',
-            'X-CMC_PRO_API_KEY': 'YOUR_KEY'
+            'X-CMC_PRO_API_KEY': 'b4cbfe1d-1388-493e-8bcc-9367ee522f6e'
         }
 
         #Get metadata of each coin
         response = requests.get(url, params=parameters, headers=headers)
         json = response.json()
-
+        #print(json)
         #Process json
         with click.progressbar(length=len(json['data']), show_pos=True) as progress_bar:
-
+            print("sdfadsfdfsdf")
             for elem in json['data']:
                 #import pdb;pdb.set_trace()
                 progress_bar.update(1)
@@ -194,10 +210,16 @@ df = pd.DataFrame(data_coinmarketcap, columns=['ID', 'Name', 'Symbol', 'Descript
 #Convert dataframe to csv
 df.to_csv('FINAL_CRYPTO_coinmarketcap.csv', sep=';', encoding='utf-8')
 
-######################################################################################################################################################
-######################################################################################################################################################
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
 
 ###****OPENSEA.IO****###
+###Current not working###
+#problems getting a key. due to lack of time we moved on. We can come back to this API later.
+#DOCS
+#https://docs.opensea.io/reference/api-overview
 
 #Since we have not a paid API we have limits on the URLs we can extract from the API.
 #So, we make requests to 3 different endpoints to try to get as many URLs from different compoments as possible.
@@ -303,5 +325,115 @@ while True:
     else:
         break
 
+#Transform the list into a dataframe
 df = pd.DataFrame(data_opensea, columns=['name','created_date', 'external_url', 'banner_image_url', 'description', 'discord_url', "image_url", "telegram_url", "instagram_username"])
+#Convert dataframe to csv
 df.to_csv('FINAL_opeansea.csv', sep=';', encoding='utf-8')
+
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+###livecoinwatch
+#simple API call to get just the URLs
+#DOCS
+#https://livecoinwatch.github.io/lcw-api-docs/
+
+data_livecoinwatch = []
+
+#livecoinwatch endpoit
+url = "https://api.livecoinwatch.com/coins/list"
+
+#payload
+payload = json.dumps({
+  "currency": "USD",
+  "sort": "rank",
+  "order": "ascending",
+  "offset": 0,
+  "limit": 32000,
+  "meta": True
+})
+
+headers = {
+  'content-type': 'application/json',
+  'x-api-key': 'YOUR KEY'
+}
+
+#Get URLs
+response = requests.request("POST", url, headers=headers, data=payload)
+for elem in response.json():
+    data_livecoinwatch.append([value for key, value in elem["links"].items() if key == 'website' and value is not None])
+
+#Transform the list into a dataframe
+df = pd.DataFrame(data_livecoinwatch, columns=['URL'])
+#Convert dataframe to csv
+df.to_csv('FINAL_livecoinwatch.csv', sep=';', encoding='utf-8')
+
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+###nftscan
+#simple API call to get just the URLs
+#DOCS
+#https://docs.nftscan.com/reference/evm/model/asset-model
+
+def request_data_nftscan(url, data_nftscan, headers):
+    #Get URLs
+    response = requests.request("GET", url, headers=headers)
+    data = response.json()['data']
+    for elem in data:
+        data_nftscan.append([elem['website']])
+
+data_nftscan = []
+
+#The nftscan API has different internal APIs for each chain\coin. 
+#Thus, It is necessary to make requests to different internal APIs
+
+headers = {
+  'content-type': 'application/json',
+  'X-API-KEY': 'YOUR KEY'
+}
+
+url = "https://restapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://bnbapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://polygonapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://arbitrumapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://optimismapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://zksyncapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://lineaapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://baseapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://scrollapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://starknetapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://avaxapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+url = "https://fantomapi.nftscan.com/api/v2/collections/rankings?sort_field=volume_total&sort_direction=desc&limit=100000"
+request_data_nftscan(url, data_nftscan, headers)
+
+#Transform the list into a dataframe
+df = pd.DataFrame(data_nftscan, columns=['URL'])
+#Convert dataframe to csv
+df.to_csv('FINAL_nftscan.csv', sep=';', encoding='utf-8')
